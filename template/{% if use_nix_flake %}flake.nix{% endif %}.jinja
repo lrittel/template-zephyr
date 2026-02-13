@@ -1,0 +1,69 @@
+{
+  description = "A development environment as a Nix Flake";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+
+{% if use_github_workflow +%}
+    nix-github-actions = {
+      url = "github:nix-community/nix-github-actions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+{%- endif %}
+  };
+
+  outputs =
+    {
+      self, 
+      nixpkgs, 
+{%- if use_github_workflow +%}
+      nix-github-actions,
+{% endif %}
+      ... 
+    }:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      inherit (nixpkgs) lib;
+    in
+    {
+      devShells."${system}".default =
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+          };
+        in
+        pkgs.mkShell {
+          packages = (with pkgs; [
+{%- if use_github_workflow +%}
+            act
+{%- endif %}
+            ccache
+            cmake
+            dfu-util
+            # dts is included in the hosttools
+            gperf
+            direnv
+            entr
+            just
+            gnumake
+            ninja
+            python3
+          ]);
+
+          env = {};
+
+          shellHook = ''
+            echo "Starting development environment..."
+          '';
+        };
+
+{%- if use_github_workflow +%}
+      githubActions = nix-github-actions.lib.mkGithubMatrix { checks = self.packages; };
+{%- endif %}
+    };
+}
+
+{#
+vim: syntax=nix.jinja:ts=2:sw=2:et
+#}

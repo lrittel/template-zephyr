@@ -1,0 +1,146 @@
+zephyr_version:
+  type: str
+  default: "4.3.0"
+  when: false
+
+zephyr_sdk_version:
+  type: str
+  default: "0.17.4"
+  when: false
+
+cmake_version:
+  type: str
+  default: "4.1.2"
+  when: false
+
+project_name:
+  type: str
+  help: How is the project called? The name should not contain any whitespace.
+  validator: |-
+    {% if not (project_name | regex_search('^[\\w+\\-]+$')) -%}
+    The project name contains invalid characters.
+    {%- endif %}
+
+description:
+  type: str
+  help: "Enter a short description of what the project does:"
+  default: ""
+
+zephyr_board:
+  type: str
+  help: "Which board should this project use?"
+  choices:
+    - nucleo_l476rg
+    # TODO: add "custom"
+
+zephyr_arch:
+  type: str
+  help: Which architecture is the board based on?
+  default: |-
+    {%- if (zephyr_board.startswith("nucleo_")) -%}
+    arm
+    {%- endif -%}
+  choices:
+    - arm
+  when: "{{ zephyr_board == 'custom' }}"
+
+zephyr_soc:
+  type: str
+  help: Which SOC is the board based on?
+  default: |-
+    {%- if (zephyr_board.startswith("nucleo_")) -%}
+    stm32{{ zephyr_board.removeprefix("nucleo_") }}
+    {%- endif -%}
+  when: "{{ zephyr_board == 'custom' }}"
+
+zephyr_sdk_toolchain:
+  type: str
+  help: Which toolchain to use?
+  default: |-
+    {%- if zephyr_arch == "arm" -%}
+    arm-zephyr-eabi
+    {%- endif -%}
+  choices:
+    # Updated on 2026-02-14
+    - aarch64-zephyr-elf
+    - arc-zephyr-elf
+    - arc64-zephyr-elf
+    - arm-zephyr-eabi
+    - microblazeel-zephyr-elf
+    - mips-zephyr-elf
+    - nios2-zephyr-elf
+    - riscv64-zephyr-elf
+    - rx-zephyr-elf
+    - sparc-zephyr-elf
+    - x86_64-zephyr-elf
+    - xtensa-amd_acp_6_0_adsp_zephyr-elf
+    - xtensa-dc233c_zephyr-elf
+    - xtensa-espressif_esp32_zephyr-elf
+    - xtensa-espressif_esp32s2_zephyr-elf
+    - xtensa-espressif_esp32s3_zephyr-elf
+    - xtensa-intel_ace15_mtpm_zephyr-elf
+    - xtensa-intel_ace30_ptl_zephyr-elf
+    - xtensa-intel_tgl_adsp_zephyr-elf
+    - xtensa-mtk_mt818x_adsp_zephyr-elf
+    - xtensa-mtk_mt8195_adsp_zephyr-elf
+    - xtensa-mtk_mt8196_adsp_zephyr-elf
+    - xtensa-mtk_mt8365_adsp_zephyr-elf
+    - xtensa-nxp_imx_adsp_zephyr-elf
+    - xtensa-nxp_imx8m_adsp_zephyr-elf
+    - xtensa-nxp_imx8ulp_adsp_zephyr-elf
+    - xtensa-nxp_rt500_adsp_zephyr-elf
+    - xtensa-nxp_rt600_adsp_zephyr-elf
+    - xtensa-nxp_rt700_hifi1_zephyr-elf
+    - xtensa-nxp_rt700_hifi4_zephyr-elf
+    - xtensa-sample_controller_zephyr-elf
+    - xtensa-sample_controller32_zephyr-elf
+  when: "{{ zephyr_arch not in ['arm'] }}"
+
+use_pre_commit:
+  type: bool
+  help: Do you want to set up a pre-commit configuration?
+  default: true
+
+use_commitizen:
+  type: bool
+  help: Do you want to set up a commitizen configuration?
+  default: true
+
+use_github_workflow:
+  type: bool
+  help: Do you want to generate GitHub Workflows?
+  default: true
+
+use_nix_flake:
+  type: bool
+  help: Do you want to generate a flake.nix for the project?
+  default: true
+
+use_vscode:
+  type: bool
+  help: Do you want to generate a development environment for VS Code?
+  default: true
+
+_subdirectory: "template"
+
+_tasks:
+  - command: |
+      git init --initial-branch=main
+    when: "{{ _copier_operation }} == 'copy' }}"
+  # The pre-commit hook will likely fail. But we run the command for the fixups
+  # anyways. Add || true to make sure that the copier operation does not fail
+  # when pre-commit reformats files.
+  # Add files again to include the formatting changes done by pre-commit.
+  - command: |
+      {% if use_nix %}
+        {% if use_pre_commit %}
+          nix develop -c "just run-pre-commit-all || true"
+        {% endif %}
+      {% else %}
+        {% if use_pre_commit %}
+          git add .
+          bash -c "just run-pre-commit-all || true"
+        {% endif %}
+      {% endif %}
+      git add .
+    when: "{{ _copier_operation }} in ['copy', 'update'] }}"

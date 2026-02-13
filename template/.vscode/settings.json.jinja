@@ -4,9 +4,9 @@
   "files.insertFinalNewline": true,
   "files.eol": "\n",
   "kconfig.zephyr.board": {
-    "board": "nucleo_l476rg",
-    "arch": "arm",
-    "dir": "${env:ZEPHYR_BASE}/boards/arm/nucleo_l476rg"
+    "board": "{{ zephyr_board }}",
+    "arch": "{{ zephyr_arch }}",
+    "dir": "${env:ZEPHYR_BASE}/boards/{{ zephyr_arch }}/{{ zephyr_board }}"
   },
   "cmake.configureOnOpen": false,
   "editor.formatOnPaste": true,

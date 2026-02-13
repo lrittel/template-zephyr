@@ -1,0 +1,14 @@
+{% if use_nix_flake -%}
+use flake
+{% endif -%}
+
+layout python3
+
+export ZEPHYR_SDK_INSTALL_DIR="../.zephyr-sdk"
+
+{% if use_pre_commit -%}
+pre-commit install
+{%- endif %}
+{#
+vim: syntax=sh.jinja
+#}

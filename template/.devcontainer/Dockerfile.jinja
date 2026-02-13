@@ -1,0 +1,8 @@
+FROM ghcr.io/zephyrproject-rtos/zephyr-build:v{{ zephyr_sdk_version }}
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang-format
+
+{#
+vim set: filetype=dockerfile.jinja
+#}

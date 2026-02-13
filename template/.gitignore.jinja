@@ -1,0 +1,29 @@
+*.orig
+
+[bB]uild/
+[bB]uild*
+[rR]elease/*
+[rR]eport/*
+
+.cache/
+
+# Editors
+## (Neo)Vim
+### Swap
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Local configuration
+.env
+
+{% if use_direnv -%}
+# direnv
+/.direnv/
+{%- endif %}
+
+{#
+vim: syntax=gitignore.jinja
+#}

@@ -1,0 +1,101 @@
+direnv := require("direnv")
+{#
+Specify the Justfile explicitely because I had issues invoking this Justfile
+from the template's Justfile.
+#}
+just := "\"" + just_executable() + "\"" + " -f \"" + justfile() + "\""
+
+zephyr_board := "{{ zephyr_board }}"
+zephyr_sdk_version := "{{ zephyr_sdk_version }}"
+zephyr_sdk_toolchain := "{{ zephyr_sdk_toolchain }}"
+sdk_dir := absolute_path(shell("direnv exec \"$1\" sh -c 'echo $ZEPHYR_SDK_INSTALL_DIR'", justfile_directory()))
+
+# List the available recipes if no recipe is specified.
+list:
+    {{ "{{ just }}" }} --list
+
+[positional-arguments]
+_python3 *ARGS:
+    "{{ "{{ direnv }}" }}" exec . python3 "$@"
+
+[positional-arguments]
+_pip3 *ARGS:
+    {{ "{{ just }}" }} _python3 -m pip "$@"
+
+_setup-venv:
+    # Install West.
+    {{ "{{ just }}" }} _pip3 install west
+    # Install the rest of the workspace.
+    {{ "{{ just }}" }} west-update
+    # Install Zephyr's Python dependencies and additional tools.
+    {{ "{{ just }}" }} _pip3 install \
+        {% if use_commitizen -%}
+        commitizen \
+        {% endif -%}
+        {% if use_pre_commit -%}
+        pre-commit \
+        {% endif -%}
+        $({{ "{{ just }}" }} west packages pip)
+
+[working-directory('..')]
+_install_sdk:
+    #!/usr/bin/env bash
+    set -eauxo pipefail
+
+    BASE_URL="https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{{ "{{ zephyr_sdk_version }}" }}"
+    ARCHIVE="zephyr-sdk-{{ "{{ zephyr_sdk_version }}" }}_linux-$(uname -m)_minimal.tar.xz"
+    ARCHIVE_DIR="zephyr-sdk-{{ "{{ zephyr_sdk_version }}" }}"
+
+    if [ -d "{{ "{{ sdk_dir }}" }}/$ARCHIVE_DIR" ]; then
+        echo "SDK is already downloaded, not re-downloading ..."
+    else
+        # Unpack the archive.
+        wget "$BASE_URL/$ARCHIVE"
+        wget -O - "$BASE_URL/sha256.sum" | shasum --check --ignore-missing
+        mkdir -p "{{ "{{ sdk_dir }}" }}"
+        tar -xf "$ARCHIVE" -C "{{ "{{ sdk_dir }}" }}"
+        rm "$ARCHIVE"
+    fi
+
+    # Install toolchain and hosttools
+    cd "{{ "{{ sdk_dir }}" }}/$ARCHIVE_DIR" && ./setup.sh -t "{{ zephyr_sdk_toolchain }}" -h
+
+# Setup the venv managed by direnv.
+setup: _setup-venv _install_sdk
+
+# Run the west command with the given parameters.
+[group('tools')]
+[positional-arguments]
+west *ARGS:
+    {{ "{{ just }}" }} _python3 -m west "$@"
+
+# Build the application
+[group('application')]
+build-app:
+    {{ "{{ just }}" }} west build -b "{{ "{{ zephyr_board }}" }}"
+
+# Update the West workspace according to the manifest.
+[group('west')]
+[working-directory('..')]
+west-update:
+    {{ "{{ just }}" }} west update
+
+# Run the pre-commit hook manually.
+[group('ci')]
+run-pre-commit:
+    pre-commit run
+
+# Run the pre-commit hook manually on all files.
+[group('ci')]
+run-pre-commit-all:
+    pre-commit run --all
+
+{%- if use_github_workflow +%}
+# Run the GitHub Actions workflows locally.
+[group('ci')]
+run-workflows:
+    act
+{%- endif %}
+{#
+vim: filetype=just.jinja
+#}

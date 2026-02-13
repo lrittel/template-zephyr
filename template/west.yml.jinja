@@ -1,0 +1,20 @@
+manifest:
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v{{ zephyr_version }}
+      clone-depth: 1
+      import:
+        name-allowlist:
+          {% if zephyr_soc.startswith("stm32") -%}
+          - cmsis_6
+          - hal_stm32
+          {%- endif %}
+  self:
+    path: application
+
+  version: "1.2"

@@ -1,0 +1,14 @@
+# {{ project_name }}
+## Dependencies
+
+- [direnv](https://direnv.net/)
+- [CMake](https://cmake.org/), ≥{{ cmake_version }}
+- The dependencies [required by Zephyr](https://docs.zephyrproject.org/latest/develop/getting_started/installation_linux.html)
+{% if use_nix_flake -%}
+- [Nix](https://nix.dev/) (optional)
+{%- endif %}
+
+{#
+vim: set filetype=markdown.jinja
+#}
+
